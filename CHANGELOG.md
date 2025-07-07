@@ -1,5 +1,8 @@
 # Changelog
 
+# Version 1.22.1 (2025-07-07)
+* Make question autosaveable
+
 # Version 1.22.0 (2024-10-14)
 * Update for ILIAS 9.5
 
