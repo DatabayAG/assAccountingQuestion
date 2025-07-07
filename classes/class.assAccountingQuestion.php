@@ -11,7 +11,7 @@
  * @version    $Id:  $
  * @ingroup ModulesTestQuestionPool
  */
-class assAccountingQuestion extends assQuestion
+class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosaveable
 {
     public const SUB_NUMERIC = 'numeric';  // Substitute a variable with float value as numeric string for further calculations (use . for decimals)
     public const SUB_DISPLAY = 'display';  // Substitute a variable with float value rounded with given precision for display
