@@ -804,7 +804,40 @@ class assAccountingQuestionGUI extends assQuestionGUI
         $show_feedback = false,
         $show_correct_solution = false,
         $show_manual_scoring = false,
-        $show_question_text = true
+        $show_question_text = true,
+        $show_inline_feedback = true
+    ): string {
+
+        return $this->renderSolutionOutput(
+            null,
+            $active_id,
+            $pass,
+            $graphicalOutput,
+            $result_output,
+            $show_question_only,
+            $show_feedback,
+            $show_correct_solution,
+            $show_manual_scoring,
+            $show_question_text,
+            false,
+            $show_inline_feedback,
+        );
+    }
+    
+
+    public function renderSolutionOutput(
+        mixed $user_solutions,
+        int $active_id,
+        int $pass = null,
+        bool $graphical_output = false,
+        bool $result_output = false,
+        bool $show_question_only = true,
+        bool $show_feedback = false,
+        bool $show_correct_solution = false,
+        bool $show_manual_scoring = false,
+        bool $show_question_text = true,
+        bool $show_autosave_title = false,
+        bool $show_inline_feedback = false
     ): string {
         global $DIC;
         $ilCtrl = $DIC->ctrl();
@@ -837,14 +870,19 @@ class assAccountingQuestionGUI extends assQuestionGUI
             $grading_details_note = $this->plugin->txt('grading_details_note');
         }
 
+        if (is_array($user_solutions)) {
+            // given from raw solution values by external call (maybe intermediate solution)
+            $user_solutions = $this->object->convertStoredSolutionValues($user_solutions);
+        } elseif (is_object($this->getPreviewSession())) {
+            // preview input
+            $user_solutions = (array) $this->getPreviewSession()->getParticipantsSolution();
+        } else {
+            // standard call from getSolutionOutput() in test
+            $user_solutions = $this->object->getSolutionStored($active_id, $pass, true);
+        }
 
-        // get the submitted or stored user input
-        $solution = is_object($this->getPreviewSession()) ?
-            (array) $this->getPreviewSession()->getParticipantsSolution() :
-            $this->object->getSolutionStored($active_id, $pass, true);
-
-        $solutionParts = $this->object->getSolutionParts($solution);
-        $this->object->initVariablesFromUserSolution($solution);
+        $solutionParts = $this->object->getSolutionParts($user_solutions);
+        $this->object->initVariablesFromUserSolution($user_solutions);
 
         // get the output template
         $template = $this->plugin->getTemplate("tpl.il_as_qpl_accqst_output_solution.html");

@@ -945,13 +945,20 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
             $rows = $this->getSolutionValues($active_id, $pass, $authorized);
         }
 
+       return $this->convertStoredSolutionValues($rows);
+    }
+
+    /**
+     * Convert the stored solution values to a key-value array
+     */
+    public function convertStoredSolutionValues(array $values): array
+    {
         $userSolution = array();
-        foreach ($rows as $row) {
+        foreach ($values as $row) {
             if (isset($row['value1'])) {
                 $userSolution[$row['value1']] = $row['value2'] ?? '';
             }
         }
-
         return $userSolution;
     }
 
