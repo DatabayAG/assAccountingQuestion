@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright (c) 2013 Institut fuer Lern-Innovation, Friedrich-Alexander-Universitaet Erlangen-Nuernberg
  * GPLv2, see LICENSE
@@ -19,9 +20,18 @@ class assAccountingQuestionImport extends assQuestionImport
      * Creates a question from a QTI file
      *
      * @ineritdoc
+     * todo: use parameters $importdirectory and $user_id
      */
-    public function fromXML(&$item, $questionpool_id, &$tst_id, &$tst_object, &$question_counter, $import_mapping): array
-    {
+    public function fromXML(
+        string $importdirectory,
+        int $user_id,
+        ilQTIItem $item,
+        int $questionpool_id,
+        ?int $tst_id,
+        ?ilObject &$tst_object,
+        int &$question_counter,
+        array $import_mapping
+    ): array {
         global $DIC;
 
         $ilUser = $DIC->user();

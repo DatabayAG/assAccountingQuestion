@@ -1,8 +1,12 @@
 <?php
+
 /**
  * Copyright (c) 2013 Institut fuer Lern-Innovation, Friedrich-Alexander-Universitaet Erlangen-Nuernberg
  * GPLv2, see LICENSE
  */
+
+use ILIAS\TestQuestionPool\Questions\QuestionAutosaveable;
+use ILIAS\Test\Logging\AdditionalInformationGenerator;
 
 /**
  * Class for accounting questions
@@ -11,7 +15,7 @@
  * @version    $Id:  $
  * @ingroup ModulesTestQuestionPool
  */
-class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosaveable
+class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
 {
     public const SUB_NUMERIC = 'numeric';  // Substitute a variable with float value as numeric string for further calculations (use . for decimals)
     public const SUB_DISPLAY = 'display';  // Substitute a variable with float value rounded with given precision for display
@@ -287,111 +291,23 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
         $this->parts = assAccountingQuestionPart::_getOrderedParts($this);
     }
 
-    /**
-     * Duplicates an assAccountingQuestion
-     *
-     * @access public
-     * @param bool $for_test
-     * @param string $title
-     * @param string $author
-     * @param string $owner
-     * @param int $testObjId
-     * @returvoid|integer Id of the clone or nothing.
-     */
-    public function duplicate($for_test = true, $title = "", $author = "", $owner = "", $testObjId = null): int
-    {
-        if ($this->id <= 0) {
-            // The question has not been saved. It cannot be duplicated
-            return -1;
-        }
-
-        // make a real clone to keep the object unchanged
-        // therefore no local variables are needed for the original ids
-        // the parts, however, still point to the original ones
-        $clone = clone $this;
-
-        $original_id = $this->questioninfo->getOriginalId($this->id);
-        $clone->setId(-1);
-
-        if ((int) $testObjId > 0) {
-            $clone->setObjId($testObjId);
-        }
-
-        if ($title) {
-            $clone->setTitle($title);
-        }
-        if ($author) {
-            $clone->setAuthor($author);
-        }
-        if ($owner) {
-            $clone->setOwner($owner);
-        }
-
-        if ($for_test) {
-            $clone->saveToDb($original_id, false);
-        } else {
-            $clone->saveToDb('', false);
-        }
-
-        // clone all parts
-        // must be done after saving when new id is set
-        $clone->cloneParts($this);
-
-        // copy question page content
-        $clone->copyPageOfQuestion($this->getId());
-        // copy XHTML media objects
-        $clone->copyXHTMLMediaObjectsOfQuestion($this->getId());
-
-        // call the event handler for duplication
-        $clone->onDuplicate($this->getObjId(), $this->getId(), $clone->getObjId(), $clone->getId());
-
-        return $clone->getId();
+    protected function onDuplicate(
+        int $original_parent_id,
+        int $original_question_id,
+        int $duplicate_parent_id,
+        int $duplicate_question_id
+    ): void {
+        parent::onDuplicate($original_parent_id, $original_question_id, $duplicate_parent_id, $duplicate_question_id);
+        // clone all parts, $this is already the cloned question
+        $this->cloneParts($this);
     }
 
-    /**
-     * Copies an assAccountingQuestion object
-     *
-     * @access public
-     * @param int $target_questionpool_id
-     * @param string $title
-     *  @return void|integer Id of the clone or nothing.
-     */
-    public function copyObject($target_questionpool_id, $title = "")
+    protected function onCopy(int $sourceParentId, int $sourceQuestionId, int $targetParentId, int $targetQuestionId): void
     {
-        if ($this->getId() <= 0) {
-            // The question has not been saved. It cannot be duplicated
-            return ;
-        }
+        parent::onCopy($sourceParentId, $sourceQuestionId, $targetParentId, $targetQuestionId);
 
-        // make a real clone to keep the object unchanged
-        // therefore no local variables are needed for the original ids
-        // but parts will still point to the original ones
-        $clone = clone $this;
-
-        $original_id = assQuestion::_getOriginalId($this->getId());
-        $source_questionpool_id = $this->getObjId();
-        $clone->setId(-1);
-        $clone->setObjId($target_questionpool_id);
-        if ($title) {
-            $clone->setTitle($title);
-        }
-
-        // save the clone data
-        $clone->saveToDb('', false);
-
-        // clone all parts
-        // must be done after saving when new id is set
-        $clone->cloneParts($this);
-
-        // copy question page content
-        $clone->copyPageOfQuestion($original_id);
-        // copy XHTML media objects
-        $clone->copyXHTMLMediaObjectsOfQuestion($original_id);
-
-        // call the event handler for copy
-        $clone->onCopy($source_questionpool_id, $original_id, $clone->getObjId(), $clone->getId());
-
-        return $clone->getId();
+        // clone all parts, $this is already the cloned question
+        $this->cloneParts($this);
     }
 
     /**
@@ -945,7 +861,7 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
             $rows = $this->getSolutionValues($active_id, $pass, $authorized);
         }
 
-       return $this->convertStoredSolutionValues($rows);
+        return $this->convertStoredSolutionValues($rows);
     }
 
     /**
@@ -1015,7 +931,7 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
      * @return integer/array $points/$details (array $details is deprecated !!)
      * @throws ilTestException
      */
-    public function calculateReachedPoints($active_id, $pass = null, $authorizedSolution = true, $returndetails = false): float|array
+    public function calculateReachedPoints($active_id, $pass = null, $authorized_solution = true, $returndetails = false): float
     {
         if ($returndetails) {
             throw new ilTestException('return details not implemented for ' . __METHOD__);
@@ -1029,18 +945,18 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
         $varsolution = $this->getSolutionStored($active_id, $pass, true);
         $this->initVariablesFromUserSolution($varsolution);
 
-        $solution = $this->getSolutionStored($active_id, $pass, $authorizedSolution);
+        $solution = $this->getSolutionStored($active_id, $pass, $authorized_solution);
         return $this->calculateReachedPointsForSolution($solution);
     }
 
     /**
      * Calculate the points a user has reached in a preview session
-     * @param ilAssQuestionPreviewSession $previewSession
+     * @param ilAssQuestionPreviewSession $preview_session
      * @return float
      */
-    public function calculateReachedPointsFromPreviewSession(ilAssQuestionPreviewSession $previewSession)
+    public function calculateReachedPointsFromPreviewSession(ilAssQuestionPreviewSession $preview_session)
     {
-        $solution = (array) $previewSession->getParticipantsSolution();
+        $solution = (array) $preview_session->getParticipantsSolution();
         $this->initVariablesFromUserSolution($solution);
         return $this->calculateReachedPointsForSolution($solution);
     }
@@ -1052,7 +968,7 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
      * @param   array $solution   value1 => value2
      * @return  float    reached points
      */
-    protected function calculateReachedPointsForSolution($solution)
+    protected function calculateReachedPointsForSolution($solution): float
     {
         $solutionParts = $this->getSolutionParts($solution);
         $points = 0;
@@ -1069,14 +985,14 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
 
     /**
      * Save the submitted input in a preview session
-     * @param ilAssQuestionPreviewSession $previewSession
+     * @param ilAssQuestionPreviewSession $preview_session
      */
-    protected function savePreviewData(ilAssQuestionPreviewSession $previewSession): void
+    protected function savePreviewData(ilAssQuestionPreviewSession $preview_session): void
     {
-        $this->initVariablesFromUserSolution($previewSession->getParticipantsSolution());
+        $this->initVariablesFromUserSolution($preview_session->getParticipantsSolution());
         $userSolution = $this->addVariablesToUserSolution($this->getSolutionSubmit());
 
-        $previewSession->setParticipantsSolution($userSolution);
+        $preview_session->setParticipantsSolution($userSolution);
     }
 
 
@@ -1109,11 +1025,6 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
             }
         });
 
-        // log the saving, we assume that values have been entered
-        if (ilObjAssessmentFolder::_enabledAssessmentLogging()) {
-            $this->logAction($this->lng->txtlng("assessment", "log_user_entered_values", ilObjAssessmentFolder::_getLogLanguage()), $active_id, $this->getId());
-        }
-
         return true;
     }
 
@@ -1144,7 +1055,7 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
     {
         global $ilDB;
 
-        if($this->getStep() !== null) {
+        if ($this->getStep() !== null) {
             $query = "
 				DELETE FROM tst_solutions
 				WHERE active_fi = %s
@@ -1196,7 +1107,7 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
 			AND value1 <> 'accqst_vars'
 		";
 
-        if($this->getStep() !== null) {
+        if ($this->getStep() !== null) {
             $query .= " AND step = " . $ilDB->quote((int) $this->getStep(), 'integer') . " ";
         }
 
@@ -1233,7 +1144,7 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
 			AND value1 <> 'accqst_vars'
 		";
 
-        if($this->getStep() !== null) {
+        if ($this->getStep() !== null) {
             $query .= " AND step = " . $ilDB->quote((int) $this->getStep(), 'integer') . " ";
         }
 
@@ -1253,7 +1164,6 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
         return $return;
     }
 
-
     /**
      * Returns the question type of the question
      *
@@ -1264,20 +1174,25 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
         return "assAccountingQuestion";
     }
 
-    /**
-     * Returns the names of the additional question data tables
-     *
-     * all tables must have a 'question_fi' column
-     * data from these tables will be deleted if a question is deleted
-     *
-     * TODO: the hash table for accounts definitions needs a separate cleanup
-     *
-     * @return array    the names of the additional tables
-     */
-    public function getAdditionalTableName()
+    public function getAdditionalTableName(): string
     {
-        return array('il_qpl_qst_accqst_data',
-            'il_qpl_qst_accqst_part');
+        return 'il_qpl_qst_accqst_data';
+    }
+
+    public function deleteAdditionalTableData(int $question_id): void
+    {
+        // todo: cleanup account data
+        // - get the account hash from the question (il_qpl_qst_accqst_data)
+        // - check if hash is used by other question  (needs index)
+        // - delete hash from il_qpl_qst_accqst_hash if it is not used
+
+        parent::deleteAdditionalTableData($question_id);
+
+        $this->db->manipulateF(
+            "DELETE FROM il_qpl_qst_accqst_part WHERE question_fi = %s",
+            ['integer'],
+            [$question_id]
+        );
     }
 
     /**
@@ -1302,61 +1217,23 @@ class assAccountingQuestion extends assQuestion implements ilAssQuestionAutosave
         return $text;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function setExportDetailsXLS(ilAssExcelFormatHelper $worksheet, int $startrow, int $active_id, int $pass): int
+    public function toLog(AdditionalInformationGenerator $additional_info): array
     {
-        $worksheet->setFormattedExcelTitle($worksheet->getColumnCoord(0) . $startrow, $this->plugin->txt($this->getQuestionType()));
-        $worksheet->setFormattedExcelTitle($worksheet->getColumnCoord(1) . $startrow, $this->getTitle());
+        // TODO: Implement toLog() method.
+        return [];
+    }
 
-        $varsolution = $this->getSolutionStored($active_id, $pass, true);
-        $this->initVariablesFromUserSolution($varsolution);
+    protected function solutionValuesToLog(
+        AdditionalInformationGenerator $additional_info,
+        array $solution_values
+    ): array|string {
+        // TODO: Implement solutionValuesToLog() method.
+        return [];
+    }
 
-        $solution = $this->getSolutionStored($active_id, $pass, true);
-        $solutionParts = $this->getSolutionParts($solution);
-
-        $row = $startrow + 1;
-        $part = 1;
-        foreach ($this->getParts() as $part_obj) {
-            $part_id = $part_obj->getPartId();
-
-            $worksheet->setCell($row, 0, $this->getPlugin()->txt('accounting_table') . ' ' . $part);
-            $worksheet->setBold($worksheet->getColumnCoord(0) . $row);
-
-            // the excel fields can be filled from the stored input
-            $part_obj->setWorkingXML($solutionParts[$part_id] ?? '');
-            $part_obj->calculateReachedPoints();
-            $data = $part_obj->getWorkingData();
-
-            $point = $this->plugin->txt('point');
-            $points = $this->plugin->txt('points');
-
-            $worksheet->setCell($row, 1, $data['headerLeft'] ?? '');
-            $worksheet->setCell($row, 2, $data['headerRight'] ?? '');
-            $row++;
-
-            if (isset($data['record']['rows']) && is_array($data['record']['rows'])) {
-                foreach ($data['record']['rows'] as $r) {
-                    $left = ($r['leftAccountText'] ?? '') . ' ' . ($r['leftValueRaw'] ?? '') . ' (' . ($r['leftPoints'] ?? '') . ' ' . (($r['leftPoints'] ?? 0) == 1 ? $point : $points) . ')';
-                    $right = ($r['rightAccountText'] ?? '') . ' ' . ($r['rightValueRaw'] ?? '') . ' (' . ($r['rightPoints'] ?? '') . ' ' . (($r['rightPoints'] ?? 0) == 1 ? $point : $points) . ')';
-
-                    $worksheet->setCell($row, 1, $left);
-                    $worksheet->setCell($row, 2, $right);
-                    $row++;
-                }
-            }
-
-            foreach (array('bonusOrderLeft','bonusOrderRight','malusCountLeft','malusCountRight','malusSumsDiffer') as $key) {
-                if(!empty($data['record'][$key])) {
-                    $worksheet->setCell($row, 1, $this->plugin->txt($key));
-                    $worksheet->setCell($row, 2, $data['record'][$key] . ' ' . (abs($data['record'][$key]) == 1 ? $point : $points));
-                    $row++;
-                }
-            }
-
-            $part++;
-        }
-        return $row + 1;
+    protected function solutionValuesToText(array $solution_values): array|string
+    {
+        // TODO: Implement solutionValuesToText() method.
+        return [];
     }
 }

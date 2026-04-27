@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright (c) 2013 Institut fuer Lern-Innovation, Friedrich-Alexander-Universitaet Erlangen-Nuernberg
  * GPLv2, see LICENSE
@@ -57,46 +58,32 @@ class assAccountingQuestionGUI extends assQuestionGUI
 
     /**
      * Command: edit the question
+     * @see assNumericGUI::editQuestion()
      */
-    public function editQuestion()
-    {
+    public function editQuestion(
+        bool $checkonly = false,
+        ?bool $is_save_cmd = null
+    ): bool {
+        $save = $is_save_cmd ?? $this->isSaveCommand();
+
         $this->initQuestionForm();
-        $this->getQuestionTemplate();
-        $this->tpl->setVariable("QUESTION_DATA", $this->form->getHTML());
-    }
 
-    /**
-     * Command: save the question
-     */
-    public function save(): void
-    {
-        // assQuestionGUI::save()
-        // - calls writePostData
-        // - redirects after successful saving
-        // - otherwise does nothing
-        parent::save();
+        $errors = false;
 
-        // question couldn't be saved
-        $this->form->setValuesByPost();
-        $this->getQuestionTemplate();
-        $this->tpl->setVariable("QUESTION_DATA", $this->form->getHTML());
-    }
+        if ($save) {
+            $this->form->setValuesByPost();
+            $errors = !$this->form->checkInput();
+            $this->form->setValuesByPost(); // again, because checkInput now performs the whole stripSlashes handling and we need this if we don't want to have duplication of backslashes
 
-    /**
-     * Command: save and show page editor
-     */
-    public function saveEdit(): void
-    {
-        // assQuestionGUI::saveEdit()
-        // - calls writePostData
-        // - redirects after successful saving
-        // - otherwise does nothing
-        parent::saveEdit();
+            if ($errors) {
+                $checkonly = false;
+            }
+        }
 
-        // question couldn't be saved
-        $this->form->setValuesByPost();
-        $this->getQuestionTemplate();
-        $this->tpl->setVariable("QUESTION_DATA", $this->form->getHTML());
+        if (!$checkonly) {
+            $this->renderEditForm($this->form);
+        }
+        return $errors;
     }
 
 
@@ -391,8 +378,9 @@ class assAccountingQuestionGUI extends assQuestionGUI
      */
     protected function writePostData($always = false): int
     {
-        $this->initQuestionForm();
-        if ($this->form->checkInput()) {
+        $hasErrors = (!$always) ? $this->editQuestion(true) : false;
+
+        if (!$hasErrors) {
             $error = '';
 
             // write the basic data
@@ -418,7 +406,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
             }
 
             // check the variables XML but save it anyway
-            if(!$this->object->setVariablesXML($variables_xml)) {
+            if (!$this->object->setVariablesXML($variables_xml)) {
                 $error .= $this->plugin->txt('xml_variables_error') . '<br />' . $this->object->getAnalyzeError();
             } elseif (!$this->object->calculateVariables()) {
                 $error .= $this->plugin->txt('xml_variables_error') . '<br />' . $this->object->getAnalyzeError();
@@ -470,6 +458,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
 
             if ($error != '') {
                 $this->tpl->setOnScreenMessage('failure', $error, true);
+                return 1;
             }
 
             // save taxonomy assignment
@@ -530,8 +519,13 @@ class assAccountingQuestionGUI extends assQuestionGUI
      * @param boolean $show_specific_inline_feedback Show a feedback
      * @return string
      */
-    public function getTestOutput($active_id, $pass = null, $is_question_postponed = false, $user_post_solutions = false, $show_specific_inline_feedback = false)
-    {
+    public function getTestOutput(
+        int $active_id,
+        int $pass,
+        bool $is_question_postponed = false,
+        array|bool $user_post_solutions = false,
+        bool $show_specific_inline_feedback = false
+    ): string {
         $solution = null;
         // get the solution of the user for the active pass or from the last pass if allowed
         if ($active_id) {
@@ -673,8 +667,10 @@ class assAccountingQuestionGUI extends assQuestionGUI
      * @param boolean $show_question_only   show only the question instead of embedding page (true/false)
      * @return string
      */
-    public function getPreview($show_question_only = false, $showInlineFeedback = false)
-    {
+    public function getPreview(
+        bool $show_question_only = false,
+        bool $show_inline_feedback = false
+    ): string {
         if (is_object($this->getPreviewSession())) {
             // get or create the variable values
             $solution = (array) $this->getPreviewSession()->getParticipantsSolution();
@@ -823,7 +819,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
             $show_inline_feedback,
         );
     }
-    
+
 
     public function renderSolutionOutput(
         mixed $user_solutions,
@@ -939,7 +935,6 @@ class assAccountingQuestionGUI extends assQuestionGUI
         }
 
         if ($this->plugin->isDebug()) {
-            $template->setVariable("DEBUG_GRAPHICAL_OUTPUT", $graphicalOutput);
             $template->setVariable("DEBUG_RESULT_OUTPUT", $result_output);
             $template->setVariable("DEBUG_SHOW_QUESTION_ONLY", $show_question_only);
             $template->setVariable("DEBUG_SHOW_FEEDBACK", $show_feedback);
