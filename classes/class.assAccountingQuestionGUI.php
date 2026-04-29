@@ -56,6 +56,16 @@ class assAccountingQuestionGUI extends assQuestionGUI
         $DIC->globalScreen()->layout()->meta()->addCss($this->plugin->getStyleSheetLocation('accqstStyles.css' . self::URL_SUFFIX));
     }
 
+    protected function getAdditionalEditQuestionCommands(): array
+    {
+        return ['saveAddBooking'];
+    }
+
+    public function isSaveCommand(): bool
+    {
+        return parent::isSaveCommand() || $this->ctrl->getCmd() == 'saveAddBooking';
+    }
+
     /**
      * Command: edit the question
      * @see assNumericGUI::editQuestion()
@@ -66,7 +76,8 @@ class assAccountingQuestionGUI extends assQuestionGUI
     ): bool {
         $save = $is_save_cmd ?? $this->isSaveCommand();
 
-        $this->initQuestionForm();
+        $add_booking = $save && ($this->plugin->request()->getString('position_0') !== '');
+        $this->initQuestionForm($add_booking);
 
         $errors = false;
 
@@ -83,6 +94,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
         if (!$checkonly) {
             $this->renderEditForm($this->form);
         }
+
         return $errors;
     }
 
@@ -90,28 +102,18 @@ class assAccountingQuestionGUI extends assQuestionGUI
     /**
      * Command: save and add a new booking part
      */
-    protected function saveAddBooking()
+    public function saveAddBooking()
     {
-        $this->initQuestionForm();
-        $result = $this->writePostData();
-
-        if ($result == 0) {
-            // checking post data was successful (add new booking)
-            $this->object->saveToDb();
-            $this->initQuestionForm(true);
-        } else {
-            // checking post data not successful (review the form)
-            $this->form->setValuesByPost();
+        if (parent::saveQuestion()) {
+            $form = $this->initQuestionForm(true);
+            $this->renderEditForm($this->form);
         }
-        $this->getQuestionTemplate();
-        $this->tpl->setVariable("QUESTION_DATA", $this->form->getHTML());
-
     }
 
     /**
      * Command: Delete a part of the question
      */
-    protected function deletePart()
+    public function deletePart()
     {
         if ($this->object->deletePart($this->plugin->request()->getInt('part_id'))) {
             $this->tpl->setOnScreenMessage('success', $this->plugin->txt('part_deleted'), true);
@@ -145,12 +147,10 @@ class assAccountingQuestionGUI extends assQuestionGUI
         $form->addItem($item);
 
         // accounts XML definition
-        $item = new ilCustomInputGUI($this->plugin->txt('accounts_xml'));
+        $item = new ilTextAreaInputGUI($this->plugin->txt('accounts_xml'), 'accounts_xml');
         $item->setInfo($this->plugin->txt('accounts_xml_info'));
-        $tpl = $this->plugin->getTemplate('tpl.il_as_qpl_accqst_edit_xml.html');
-        $tpl->setVariable("CONTENT", ilLegacyFormElementsUtil::prepareFormOutput($this->object->getAccountsXML()));
-        $tpl->setVariable("NAME", 'accounts_xml');
-        $item->setHTML($tpl->get());
+        $item->setRows(10);
+        $item->setValue($this->object->getAccountsXML());
 
         // upload accounts definition
         $subitem = new ilFileInputGUI($this->plugin->txt('accounts_file'), 'accounts_file');
@@ -166,7 +166,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
             $tpl->setVariable('BUTTON_TEXT', $this->plugin->txt('download_accounts_xml'));
             $tpl->ParseCurrentBlock();
 
-            $subitem = new ilcustomInputGUI('');
+            $subitem = new ilCustomInputGUI('');
             $subitem->setHTML($tpl->get());
             $item->addSubItem($subitem);
         }
@@ -174,11 +174,11 @@ class assAccountingQuestionGUI extends assQuestionGUI
 
 
         // variables XML definition
-        $item = new ilCustomInputGUI($this->plugin->txt('variables_xml'));
+        $item = new ilTextAreaInputGUI($this->plugin->txt('variables_xml'), 'variables_xml');
         $item->setInfo($this->plugin->txt('variables_xml_info'));
-        $tpl = $this->plugin->getTemplate('tpl.il_as_qpl_accqst_edit_xml.html');
-        $tpl->setVariable("CONTENT", ilLegacyFormElementsUtil::prepareFormOutput($this->object->getVariablesXML()));
-        $tpl->setVariable("NAME", 'variables_xml');
+        $item->setRows(10);
+        $item->setValue($this->object->getVariablesXML());
+
         if ($this->plugin->isDebug()) {
             $error = '';
             if (!$this->object->calculateVariables()) {
@@ -191,9 +191,11 @@ class assAccountingQuestionGUI extends assQuestionGUI
             $dump = print_r($dump, true);
             $dump = str_replace('{', '&#123;', $dump);
             $dump = str_replace('}', '&#125;', $dump);
-            $tpl->setVariable("DUMP", $error . $dump);
+
+            $subitem = new ilCustomInputGUI('DEBUG');
+            $subitem->setHTML($error . $dump);
+            $item->addSubItem($subitem);
         }
-        $item->setHTML($tpl->get());
 
         // upload variables definition
         $subitem = new ilFileInputGUI($this->plugin->txt('variables_file'), 'variables_file');
@@ -277,12 +279,8 @@ class assAccountingQuestionGUI extends assQuestionGUI
         // Use a dummy part object for a new booking definition
         if (!isset($part_obj)) {
             $part_obj = new assAccountingQuestionPart($this->object);
+            $part_obj->setPosition($counter);
         }
-
-        // Part identifier (is 0 for a new part)
-        $item = new ilHiddenInputGUI("parts[]");
-        $item->setValue($part_obj->getPartId());
-        $form->addItem($item);
 
         // Title
         $item = new ilFormSectionHeaderGUI();
@@ -294,11 +292,8 @@ class assAccountingQuestionGUI extends assQuestionGUI
         $item->setSize(2);
         $item->setDecimals(1);
         $item->SetInfo($this->plugin->txt('position_info'));
-        if ($part_obj->getPartId()) {
-            $item->setValue(sprintf("%01.1f", $part_obj->getPosition()));
-        }
+        $item->setValue(sprintf("%01.1f", $part_obj->getPosition()));
         $form->addItem($item);
-
 
         // Maximum Points
         $item = new ilNonEditableValueGUI($this->plugin->txt('max_score'));
@@ -325,12 +320,10 @@ class assAccountingQuestionGUI extends assQuestionGUI
         $form->addItem($item);
 
         // Booking XML definition
-        $item = new ilCustomInputGUI($this->plugin->txt('booking_xml'));
+        $item = new ilTextAreaInputGUI($this->plugin->txt('booking_xml'), 'booking_xml_' . $part_obj->getPartId());
         $item->setInfo($this->plugin->txt('booking_xml_info'));
-        $tpl = $this->plugin->getTemplate('tpl.il_as_qpl_accqst_edit_xml.html');
-        $tpl->setVariable("CONTENT", ilLegacyFormElementsUtil::prepareFormOutput($part_obj->getBookingXML()));
-        $tpl->setVariable("NAME", 'booking_xml_' . $part_obj->getPartId());
-        $item->setHTML($tpl->get());
+        $item->setRows(10);
+        $item->setValue($part_obj->getBookingXML());
 
         // Booking file
         $subitem = new ilFileInputGUI($this->plugin->txt('booking_file'), "booking_file_" . $part_obj->getPartId());
@@ -381,7 +374,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
         $hasErrors = (!$always) ? $this->editQuestion(true) : false;
 
         if (!$hasErrors) {
-            $error = '';
+            $error = false;
 
             // write the basic data
             $this->writeQuestionGenericPostData();
@@ -392,10 +385,13 @@ class assAccountingQuestionGUI extends assQuestionGUI
             } else {
                 $accounts_xml = $this->plugin->request()->getXml('accounts_xml');
             }
+            $this->form->getItemByPostVar('accounts_xml')->setValue($accounts_xml);
 
             // check the accounts definition but save it anyway
             if (!$this->object->setAccountsXML($accounts_xml)) {
-                $error .= $this->plugin->txt('xml_accounts_error');
+                $e = $this->plugin->txt('xml_accounts_error');
+                $this->form->getItemByPostVar('accounts_xml')->setAlert($e);
+                $error = true;
             }
 
             // get the variables definition either by file upload or post
@@ -404,12 +400,17 @@ class assAccountingQuestionGUI extends assQuestionGUI
             } else {
                 $variables_xml = $this->plugin->request()->getXml('variables_xml');
             }
+            $this->form->getItemByPostVar('variables_xml')->setValue($variables_xml);
 
             // check the variables XML but save it anyway
             if (!$this->object->setVariablesXML($variables_xml)) {
-                $error .= $this->plugin->txt('xml_variables_error') . '<br />' . $this->object->getAnalyzeError();
+                $e = $this->plugin->txt('xml_variables_error') . '<br />' . $this->object->getAnalyzeError();
+                $this->form->getItemByPostVar('variables_xml')->setAlert($e);
+                $error = true;
             } elseif (!$this->object->calculateVariables()) {
-                $error .= $this->plugin->txt('xml_variables_error') . '<br />' . $this->object->getAnalyzeError();
+                $e = $this->plugin->txt('xml_variables_error') . '<br />' . $this->object->getAnalyzeError();
+                $this->form->getItemByPostVar('variables_xml')->setAlert($e);
+                $error = true;
             }
 
             // calculation tolerance
@@ -426,21 +427,24 @@ class assAccountingQuestionGUI extends assQuestionGUI
             foreach ($this->plugin->request()->getIntArray('parts') as $part_id) {
                 $positions[$part_id] = $this->plugin->request()->getString('position_' . $part_id);
             }
+
+            $positions = [];
+            foreach ($this->object->getParts() as $part) {
+                $positions[$part->getPartId()] = $this->plugin->request()->getString('position_' . $part->getPartId());
+            }
+            // a new part is added
+            if ($this->plugin->request()->getString('position_0') !== '') {
+                $positions[0] = $this->plugin->request()->getString('position_0');
+            }
             asort($positions, SORT_NUMERIC);
 
             // set the part data
             $i = 1;
             foreach ($positions as $part_id => $pos) {
-                if ($part_id == 0 and $pos == '') {
-                    // add a new part to the end
-                    $pos = count($positions);
-                } else {
-                    // set the position to the counter
-                    $pos = $i++;
-                }
+                $pos = $i++;
 
                 // save the question part
-                // a new part object is be created if part_id is 0
+                // a new part object is created if part_id is 0
                 $part_obj = $this->object->getPart($part_id);
                 $part_obj->setText($this->form->getInput('text_' . $part_id));
                 $part_obj->setPosition($pos);
@@ -449,15 +453,19 @@ class assAccountingQuestionGUI extends assQuestionGUI
                 } else {
                     $booking_xml = $this->plugin->request()->getXml('booking_xml_' . $part_id);
                 }
+                $this->form->getItemByPostVar('booking_xml_' . $part_id)->setValue($booking_xml);
 
                 // check the booking definition but save it anyway
                 if (!$part_obj->setBookingXML($booking_xml)) {
-                    $error .= sprintf($this->plugin->txt('xml_booking_error'), $pos);
+                    $e = sprintf($this->plugin->txt('xml_booking_error'), $pos);
+                    $this->form->getItemByPostVar('booking_xml_' . $part_id)->setAlert($e);
+                    $error = true;
                 }
             }
 
-            if ($error != '') {
-                $this->tpl->setOnScreenMessage('failure', $error, true);
+            if ($error) {
+                $this->tpl->setOnScreenMessage('failure', $this->lng->txt('form_input_not_valid'), true);
+                $this->renderEditForm($this->form);
                 return 1;
             }
 
@@ -469,6 +477,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
 
         } else {
             // indicator to show the edit form with errors
+            $this->renderEditForm($this->form);
             return 1;
         }
     }
@@ -480,7 +489,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
      * The file type is given in $_GET['xmltype']
      * The part ID is given in    $_GET['part_id']
      */
-    protected function downloadXml()
+    public function downloadXml()
     {
         switch ($this->plugin->request()->getString('xmltype')) {
             case 'accounts':

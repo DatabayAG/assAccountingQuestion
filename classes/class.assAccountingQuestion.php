@@ -159,7 +159,7 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
      * @param    boolean $a_save_parts       save all parts, too
      * @access    public
      */
-    public function saveToDb($original_id = "", $a_save_parts = true): void
+    public function saveToDb($original_id = null, $a_save_parts = true): void
     {
         global $DIC;
 
@@ -169,15 +169,8 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
         // must be done before basic data is saved
         $this->calculateMaximumPoints();
 
-
         // save the basic data (implemented in parent)
-        // a new question is created if the id is -1
-        // afterwards the new id is set
-        if ($original_id == '') {
-            $this->saveQuestionDataToDb();
-        } else {
-            $this->saveQuestionDataToDb($original_id);
-        }
+        $this->saveQuestionDataToDb($original_id);
 
         // save the account definition to a separate hash table
         $hash = hash("md5", $this->getAccountsXML());
@@ -214,7 +207,7 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
         }
         // save stuff like suggested solutions
         // update the question time stamp and completion status
-        parent::saveToDb();
+        parent::saveToDb($original_id);
     }
 
     /**
@@ -414,7 +407,7 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
                 if ($part_obj->delete()) {
                     unset($this->parts[$a_part_id]);
                     $this->calculateMaximumPoints();
-                    $this->saveToDB('', false);
+                    $this->saveToDB(null, false);
                     return true;
                 }
             }
