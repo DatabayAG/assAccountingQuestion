@@ -131,9 +131,12 @@ class assAccountingQuestionGUI extends assQuestionGUI
      */
     private function initQuestionForm($add_booking = false)
     {
+        // use it without return value to just show the "question in use message"
+        $this->outQuestionType();
+
         $form = new ilPropertyFormGUI();
         $form->setFormAction($this->ctrl->getFormAction($this));
-        $form->setTitle($this->outQuestionType());
+        $form->setTitle($this->plugin->getQuestionTypeTranslation());
         $form->setMultipart(false);
         $form->setTableWidth("100%");
         $form->setId("accqst");
