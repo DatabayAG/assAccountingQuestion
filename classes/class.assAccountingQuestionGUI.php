@@ -31,6 +31,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
     protected $form;
 
     private MetaContent $meta;
+    private bool $has_write_access = false;
 
     /**
      * assAccountingQuestionGUI constructor
@@ -54,6 +55,8 @@ class assAccountingQuestionGUI extends assQuestionGUI
 
         $this->meta = $DIC->globalScreen()->layout()->meta();
         $this->meta->addCss(self::URL_PATH . '/templates/accqstStyles.css');
+
+        $this->has_write_access = $DIC->access()->checkAccess('write', '', $this->plugin->request()->getInt('ref_id'));
     }
 
     protected function getAdditionalEditQuestionCommands(): array
@@ -806,7 +809,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
     public function getSolutionOutput(
         $active_id,
         $pass = null,
-        $graphicalOutput = false,
+        $graphical_output = false,
         $result_output = false,
         $show_question_only = true,
         $show_feedback = false,
@@ -816,11 +819,15 @@ class assAccountingQuestionGUI extends assQuestionGUI
         $show_inline_feedback = true
     ): string {
 
+        if (strtolower($this->ctrl->getCmdClass()) == 'ilobjtestgui' && $this->ctrl->getCmd() == 'showQuestions') {
+            $show_correct_solution = true;
+        }
+
         return $this->renderSolutionOutput(
             null,
             $active_id,
             $pass,
-            $graphicalOutput,
+            $graphical_output,
             $result_output,
             $show_question_only,
             $show_feedback,
@@ -847,33 +854,14 @@ class assAccountingQuestionGUI extends assQuestionGUI
         bool $show_autosave_title = false,
         bool $show_inline_feedback = false
     ): string {
-        global $DIC;
-        $ilCtrl = $DIC->ctrl();
-        $ilAccess = $DIC->access();
 
+        // show the grading details, if allowed
         $show_grading_details = false;
         $grading_details_note = '';
-
-        // adjust the parameters for special cases
-        if ($ilCtrl->getCmd() == 'print'
-            and ($ilCtrl->getCmdClass() == 'ilobjquestionpoolgui' or $ilCtrl->getCmdClass() == 'ilobjtestgui')) {
-            switch ($this->plugin->request()->getString('output')) {
-                case 'detailed':
-                    $show_correct_solution = true;
-                    $show_grading_details = false;
-                    break;
-                case 'detailed_scoring':
-                default:
-                    $show_correct_solution = true;
-                    $show_grading_details = true;
-                    break;
-            }
-        } elseif (is_object($this->getPreviewSession())) {
-            $show_correct_solution = true; // needed!
-            $show_grading_details = true;
-        } elseif ($show_manual_scoring) {
-            $show_grading_details = true;
-        } elseif ($ilAccess->checkAccess('write', '', $this->plugin->request()->getInt('ref_id'))) {
+        if (is_object($this->getPreviewSession())
+            || $show_manual_scoring
+            || $show_correct_solution && $this->has_write_access
+        ) {
             $show_grading_details = true;
             $grading_details_note = $this->plugin->txt('grading_details_note');
         }
@@ -1080,13 +1068,10 @@ class assAccountingQuestionGUI extends assQuestionGUI
      */
     public function getSpecificFeedbackOutput($userSolution): string
     {
-        global $DIC;
-        $ilAccess = $DIC->access();
-
         $show_points = false;
         if (is_object($this->getPreviewSession())) {
             $show_points = true;
-        } elseif ($ilAccess->checkAccess('write', '', ($this->plugin->request()->getInt('ref_id')))) {
+        } elseif ($this->has_write_access) {
             $show_points = true;
             $feedback_note = $this->plugin->txt('grading_details_note');
         }
