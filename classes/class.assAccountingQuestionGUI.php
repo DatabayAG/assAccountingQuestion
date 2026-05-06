@@ -5,6 +5,8 @@
  * GPLv2, see LICENSE
  */
 
+use ILIAS\GlobalScreen\Scope\Layout\MetaContent\MetaContent;
+
 /**
  * Accounting question GUI representation
  *
@@ -21,18 +23,14 @@ class assAccountingQuestionGUI extends assQuestionGUI
      */
     public const URL_PATH = "./Customizing/global/plugins/Modules/TestQuestionPool/Questions/assAccountingQuestion";
 
-    /**
-     * @const	string 	URL suffix to prevent caching of css files (increase with every change)
-     * 					Note: this does not yet work with $tpl->addJavascript()
-     */
-    public const URL_SUFFIX = "?css_version=1.5.0";
-
     /** @var ilassAccountingQuestionPlugin */
     protected $plugin = null;
 
 
     /** @var ilPropertyFormGUI */
     protected $form;
+
+    private MetaContent $meta;
 
     /**
      * assAccountingQuestionGUI constructor
@@ -53,7 +51,9 @@ class assAccountingQuestionGUI extends assQuestionGUI
         if ($id >= 0) {
             $this->object->loadFromDb($id);
         }
-        $DIC->globalScreen()->layout()->meta()->addCss($this->plugin->getStyleSheetLocation('accqstStyles.css' . self::URL_SUFFIX));
+
+        $this->meta = $DIC->globalScreen()->layout()->meta();
+        $this->meta->addCss(self::URL_PATH . '/templates/accqstStyles.css');
     }
 
     protected function getAdditionalEditQuestionCommands(): array
@@ -573,14 +573,14 @@ class assAccountingQuestionGUI extends assQuestionGUI
         // init the javascript support for answer input
         // NOTE: the own URL suffix does not work with addJavascript
         global $DIC;
-        $DIC->globalScreen()->layout()->meta()->addCss(self::URL_PATH . '/js/combobox/css/bootstrap-combobox.css' . self::URL_SUFFIX);
-        $DIC->globalScreen()->layout()->meta()->addJs(self::URL_PATH . '/js/combobox/js/bootstrap-combobox.js');
-        $DIC->globalScreen()->layout()->meta()->addJs(self::URL_PATH . '/js/ilAccountingQuestion.js');
+        $this->meta->addCss(self::URL_PATH . '/js/combobox/css/bootstrap-combobox.css');
+        $this->meta->addJs(self::URL_PATH . '/js/combobox/js/bootstrap-combobox.js');
+        $this->meta->addJs(self::URL_PATH . '/js/ilAccountingQuestion.js');
 
         if ($this->object->getAccountsSearchTitle()) {
-            $DIC->globalScreen()->layout()->meta()->addOnLoadCode('il.AccountingQuestion.init({nameMatching:true});');
+            $this->meta->addOnLoadCode('il.AccountingQuestion.init({nameMatching:true});');
         } else {
-            $DIC->globalScreen()->layout()->meta()->addOnLoadCode('il.AccountingQuestion.init({nameMatching:false});');
+            $this->meta->addOnLoadCode('il.AccountingQuestion.init({nameMatching:false});');
         }
 
         // get the question output template
@@ -959,7 +959,7 @@ class assAccountingQuestionGUI extends assQuestionGUI
         $questionoutput = $template->get();
 
         // get the surrounding template
-        $solutiontemplate = new ilTemplate("tpl.il_as_tst_solution_output.html", true, true, "Modules/TestQuestionPool");
+        $solutiontemplate = new ilTemplate("tpl.il_as_tst_solution_output.html", true, true, "components/ILIAS/TestQuestionPool");
         $solutiontemplate->setVariable("SOLUTION_OUTPUT", $questionoutput);
 
         // add generic feedback

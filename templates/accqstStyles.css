@@ -1,3 +1,10 @@
+/* XML in question editing */
+textarea[id='accounts_xml'],
+textarea[id='variables_xml'],
+textarea[id^='booking_xml']{
+	font-family: monospace;
+}
+
 /* Needed to make combo boxes visible */
 #tst_output {
     overflow: visible;
@@ -56,11 +63,6 @@ tr.accqstBookingTableScoring td {
 	border-width:1px;
 	color:black;
 	padding: 3px;
-}
-
-.accqstXmlInput {
-    width: 100%;
-    font-family: monospace;
 }
 
 table.accqstScoringTable {
