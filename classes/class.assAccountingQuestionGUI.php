@@ -962,6 +962,13 @@ class assAccountingQuestionGUI extends assQuestionGUI
             // get page object output
             $solutionoutput = $this->getILIASPage($solutionoutput);
         }
+
+
+        if ($show_manual_scoring) {
+            $css = file_get_contents((__DIR__ . "/../templates/accqstStyles.css"));
+            $solutionoutput = "<style>$css</style>$solutionoutput";
+        }
+
         return $solutionoutput;
     }
 
