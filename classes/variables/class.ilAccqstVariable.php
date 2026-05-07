@@ -193,4 +193,9 @@ abstract class ilAccqstVariable
     {
         return $this->plugin->toString($this->value, $this->question->getPrecision(), $this->question->getThousandsDelim());
     }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
 }

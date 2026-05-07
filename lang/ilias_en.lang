@@ -57,6 +57,7 @@ download_booking_xml#:#Upload the booking definition
 grading_details_note#:#Note: The grading details are shown because you have write permission.
 feedback_correct_solution#:#Correct solution
 feedback_user_solution#:#User solution
+variables#:#Variables
 variables_xml#:#Variables XML Definition
 variables_xml_info#:#Variables let you vary the texts and values in the question.
 xml_variables_error#:#The variables definition has errors!

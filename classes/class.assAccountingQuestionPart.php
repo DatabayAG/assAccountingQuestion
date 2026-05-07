@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright (c) 2013 Institut fuer Lern-Innovation, Friedrich-Alexander-Universitaet Erlangen-Nuernberg
  * GPLv2, see LICENSE
@@ -641,6 +642,71 @@ class assAccountingQuestionPart
         return $this->working_data;
     }
 
+    public function getTableHeader(): string
+    {
+        switch ($this->booking_data['type'] ?? null) {
+            case 't-account':
+                $header = $this->plugin->txt('t_account_center');
+                break;
+            case 'records':
+            default:
+                $header = $this->plugin->txt('records_center');
+                break;
+        }
+
+        return $this->booking_data['headerCenter'] ?? $header;
+    }
+
+    /**
+     * Get the booking or working data as text output
+     */
+    public function getDataAsText(array $data): string
+    {
+        switch ($this->booking_data['type'] ?? null) {
+            case 't-account':
+                $header_left = $this->plugin->txt('t_account_left');
+                $header_right = $this->plugin->txt('t_accounts_right');
+                break;
+            case 'records':
+            default:
+                $header_left = $this->plugin->txt('records_left');
+                $header_right = $this->plugin->txt('records_right');
+                break;
+        }
+
+        $left = [];
+        $right = [];
+        $record = $data['record'] ?? [];
+        $rows = $record['rows'] ?? [];
+
+        if (!empty($rows)) {
+            foreach ($rows as $row) {
+                $left_account = $row['leftAccountText'] ?? '';
+                $right_account = $row['rightAccountText'] ?? '';
+
+                $left_value = empty($row['leftValueMoney']) ? '' : $this->plugin->toString($row['leftValueMoney'], $this->parent->getPrecision(), $this->parent->getThousandsDelim());
+                $right_value = empty($row['rightValueMoney']) ? '' : $this->plugin->toString($row['rightValueMoney'], $this->parent->getPrecision(), $this->parent->getThousandsDelim());
+
+                if (!empty($left_account) || !empty($left_value)) {
+                    $left[] = $left_account . ' ' . $left_value;
+                }
+                if (!empty($right_account) || !empty($right_value)) {
+                    $right[] = $right_account . ' ' . $right_value;
+                }
+            }
+        }
+
+        $text = '';
+        if (!empty($left) || !empty($right)) {
+            $text = ($data['headerLeft'] ?? $header_left) . ' (' . implode('; ', $left)
+                . ') '
+                . ($data['headerRight'] ?? $header_right) . ' (' . implode('; ', $right)
+                . ') ';
+        }
+
+        return $text;
+    }
+
     /**
      * Calculate the reached points for the working data
      * The reached points are directly merged in the working_data array
@@ -668,11 +734,11 @@ class assAccountingQuestionPart
             $lastMatch = -1;			// last matching correct row, start with -1 (none)
 
             // scan the student rows of this side
-            for($s = 0; $s < count($student['rows'] ?? []); $s++) {
+            for ($s = 0; $s < count($student['rows'] ?? []); $s++) {
                 $srow = $student['rows'][$s];	// allow manipulation
 
                 // find matching entry in correct rows of this side
-                for($c = 0; $c < count($correct['rows'] ?? []); $c++) {
+                for ($c = 0; $c < count($correct['rows'] ?? []); $c++) {
                     $crow = $correct['rows'][$c];	// allow manipulation
 
                     if (($srow[$side . 'AccountNum'] ?? '') == ($crow[$side . 'AccountNum'] ?? '')

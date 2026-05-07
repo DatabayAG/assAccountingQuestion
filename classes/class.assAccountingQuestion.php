@@ -1212,21 +1212,100 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
 
     public function toLog(AdditionalInformationGenerator $additional_info): array
     {
-        // TODO: Implement toLog() method.
-        return [];
+        $this->calculateVariables();
+
+        $texts = [];
+
+        $variables = [];
+        foreach ($this->variables as $variable) {
+            $variables[] = $variable->getName() . '=' . $variable->getDisplay();
+        }
+        if (!empty($variables)) {
+            $texts[$this->plugin->txt('variables')] = implode('; ', $variables);
+        }
+
+        foreach ($this->getParts() as $part_obj) {
+            $part_id = $part_obj->getPartId();
+            $part_obj->setBookingXML($part_obj->getBookingXML(), true);
+            $text = $part_obj->getDataAsText($part_obj->getBookingData());
+            if (!empty($text)) {
+                $texts[$part_obj->getTableHeader()] = $text;
+            }
+        }
+        return $texts;
     }
 
     protected function solutionValuesToLog(
         AdditionalInformationGenerator $additional_info,
         array $solution_values
     ): array|string {
-        // TODO: Implement solutionValuesToLog() method.
-        return [];
+
+        $texts = [];
+        $values = $this->convertStoredSolutionValues($solution_values);
+        $solution_parts = $this->getSolutionParts($values);
+
+        $texts = [];
+        foreach ($this->getParts() as $part_obj) {
+            $part_id = $part_obj->getPartId();
+            $part_obj->setWorkingXML($solution_parts[$part_id] ?? '');
+            $text = $part_obj->getDataAsText($part_obj->getWorkingData());
+            if (!empty($text)) {
+                $texts[$part_obj->getTableHeader()] = $text;
+            }
+        }
+
+        return $texts;
     }
 
     protected function solutionValuesToText(array $solution_values): array|string
     {
-        // TODO: Implement solutionValuesToText() method.
-        return [];
+        $values = $this->convertStoredSolutionValues($solution_values);
+        $solution_parts = $this->getSolutionParts($values);
+
+        $texts = [];
+        foreach ($this->getParts() as $part_obj) {
+            $part_id = $part_obj->getPartId();
+            $part_obj->setWorkingXML($solution_parts[$part_id] ?? '');
+            $text = $part_obj->getDataAsText($part_obj->getWorkingData());
+            if (!empty($text)) {
+                $texts[] = $part_obj->getTableHeader() . ' ' . $text;
+            }
+        }
+
+        return $texts;
+    }
+
+    public function getCorrectSolutionForTextOutput(int $active_id, int $pass): string
+    {
+        $solution = $this->getSolutionStored($active_id, $pass);
+        $this->initVariablesFromUserSolution($solution);
+
+        $texts = [];
+        foreach ($this->getParts() as $part_obj) {
+            $part_id = $part_obj->getPartId();
+            $text = $part_obj->getDataAsText($part_obj->getBookingData());
+            if (!empty($text)) {
+                $texts[] = $part_obj->getTableHeader() . ' ' . $text;
+            }
+        }
+
+        return implode("\n", $texts);
+    }
+
+
+    public function getVariablesAsTextArray(
+        int $active_id,
+        int $pass
+    ): array {
+
+        $solution = $this->getSolutionStored($active_id, $pass);
+        $this->initVariablesFromUserSolution($solution);
+
+        $texts = [];
+        foreach ($this->variables as $variable) {
+            $texts[] = $variable->getName() . '=' . $variable->getDisplay();
+        }
+
+        return $texts;
     }
 }

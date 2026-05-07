@@ -57,6 +57,7 @@ download_booking_xml#:#Buchungs-Definition herunterladen
 grading_details_note#:#Hinweis: Die Bewertungs-Details werden angezeigt, da Sie Schreibrecht haben.
 feedback_correct_solution#:#Korrekt
 feedback_user_solution#:#Eingabe
+variables#:#Variablen
 variables_xml#:#Variablen (XML-Definition)
 variables_xml_info#:#Mit Variablen können Sie Texte und Werte in der Fragenstellung und den Tabellen zufällig varieren.
 xml_variables_error#:#Die Variablen-Definition ist fehlerhaft!
