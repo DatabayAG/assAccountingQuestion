@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 1.23.0 (2026-06-03)
+* Update for ILIAS 10.8
+
 ## Version 1.22.2 (2025-07-22)
 * Show autosaved content in detailed results and manual scoring
 
