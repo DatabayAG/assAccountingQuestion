@@ -9,11 +9,11 @@
 $id = "accqst";
 
 // code version; must be changed for all code changes
-$version = "1.23.0";
+$version = "1.23.1";
 
 // ilias min and max version; must always reflect the versions that should
 // run with the plugin
-$ilias_min_version = "10.8";
+$ilias_min_version = "10.11";
 $ilias_max_version = "10.999";
 
 // add the responsible person for the plugin

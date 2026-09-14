@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.23.1 (2026-09-14)
+* Requires ILIAS 10 >=10.11
+* Fix Question Import (#48322)
+* Fix Question Creation with First Booking Table
+
 ## Version 1.23.0 (2026-06-03)
 * Update for ILIAS 10.8
 
