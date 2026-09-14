@@ -202,6 +202,8 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
         // save all parts (also a new one)
         if ($a_save_parts) {
             foreach ($this->parts as $part_obj) {
+                // question may have been created just before
+                $part_obj->setQuestionId($this->getId());
                 $part_obj->write();
             }
         }
