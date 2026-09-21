@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.23.2 (2026-09-21)
+* Requires ILIAS 10 >=10.11
+* Fix cloning of questions
+
 ## Version 1.23.1 (2026-09-14)
 * Requires ILIAS 10 >=10.11
 * Fix Question Import (#48322)
