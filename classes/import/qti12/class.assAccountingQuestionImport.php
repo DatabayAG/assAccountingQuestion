@@ -115,7 +115,7 @@ class assAccountingQuestionImport extends assQuestionImport
         );
 
         // first save the question  without its parts (to get a new question id)
-        $this->object->saveToDb(null, false);
+        $this->object->saveToDb(null);
 
         // then create the parts
         $parts = unserialize($item->getMetadataEntry('booking_parts'));
@@ -213,7 +213,7 @@ class assAccountingQuestionImport extends assQuestionImport
 
         // Now save the question again
         // (this also recalculates the maximum points)
-        $this->object->saveToDb(null, true);
+        $this->object->saveToDb(null);
 
         // import mapping for tests
         if ($tst_id > 0) {

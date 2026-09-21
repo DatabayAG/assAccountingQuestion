@@ -89,6 +89,11 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
     private $thousands_delim_type = '';
 
     /**
+     * Save the question parts in saveToDb()
+     */
+    private $save_parts = false;
+
+    /**
      * ilAccountingQuestion constructor
      *
      * The constructor takes possible arguments an creates an instance of the ilAccountingQuestion object.
@@ -154,12 +159,12 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
 
     /**
      * Saves an assAccountingQuestion object to a database
+     * Note: the question parts have to be saved separately
      *
      * @param    string $original_id        original id
-     * @param    boolean $a_save_parts       save all parts, too
      * @access    public
      */
-    public function saveToDb($original_id = null, $a_save_parts = true): void
+    public function saveToDb(?int $original_id = null): void
     {
         global $DIC;
 
@@ -199,18 +204,22 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
             )
         );
 
-        // save all parts (also a new one)
-        if ($a_save_parts) {
+
+        // save the question parts when requested by the GUI
+        if ($this->getSaveParts()) {
             foreach ($this->parts as $part_obj) {
                 // question may have been created just before
                 $part_obj->setQuestionId($this->getId());
                 $part_obj->write();
             }
+            $this->setSaveParts(false);
         }
+
         // save stuff like suggested solutions
         // update the question time stamp and completion status
         parent::saveToDb($original_id);
     }
+
 
     /**
      * Loads an assAccountingQuestion object from a database
@@ -409,7 +418,7 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
                 if ($part_obj->delete()) {
                     unset($this->parts[$a_part_id]);
                     $this->calculateMaximumPoints();
-                    $this->saveToDB(null, false);
+                    $this->saveToDB(null);
                     return true;
                 }
             }
@@ -1309,5 +1318,15 @@ class assAccountingQuestion extends assQuestion implements QuestionAutosaveable
         }
 
         return $texts;
+    }
+
+    public function getSaveParts(): bool
+    {
+        return $this->save_parts;
+    }
+
+    public function setSaveParts(bool $save_parts): void
+    {
+        $this->save_parts = $save_parts;
     }
 }

@@ -429,11 +429,6 @@ class assAccountingQuestionGUI extends assQuestionGUI
             }
 
             // sort the part positions
-            $positions = array();
-            foreach ($this->plugin->request()->getIntArray('parts') as $part_id) {
-                $positions[$part_id] = $this->plugin->request()->getString('position_' . $part_id);
-            }
-
             $positions = [];
             foreach ($this->object->getParts() as $part) {
                 $positions[$part->getPartId()] = $this->plugin->request()->getString('position_' . $part->getPartId());
@@ -477,6 +472,9 @@ class assAccountingQuestionGUI extends assQuestionGUI
 
             // save taxonomy assignment
             $this->saveTaxonomyAssignments();
+
+            // tell the question to save the parts when it is saved
+            $this->object->setSaveParts(true);
 
             // indicator to save the question
             return 0;
