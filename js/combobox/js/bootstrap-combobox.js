@@ -202,6 +202,11 @@
 
   , highlighter: function (item) {
       var query = this.query.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, '\\$&');
+      // Empty query becomes /()/, which matches every zero-width gap.
+      // The inserted <strong></strong> tags swallow spaces when the menu is opened via the caret.
+      if (!query) {
+        return item;
+      }
       return item.replace(new RegExp('(' + query + ')', 'ig'), function ($1, match) {
         return '<strong>' + match + '</strong>';
       })
