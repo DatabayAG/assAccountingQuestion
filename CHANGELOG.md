@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.23.3 (2026-10-01)
+* Requires ILIAS 10 >=10.11
+* Fix swallowed spaces in the dropdown of an account
+
 ## Version 1.23.2 (2026-09-21)
 * Requires ILIAS 10 >=10.11
 * Fix cloning of questions
